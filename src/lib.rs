@@ -5,16 +5,19 @@ use std::sync::Mutex;
 
 struct Worker {
     id: usize,
-    thread: thread::JoinHandle<()>,
+    thread: Option<thread::JoinHandle<()>>,
 }
 
 impl Worker {
-    fn new(id: usize, receiver:  Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
-        let thread = thread::spawn(|| {
-            receiver;
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+        let thread = thread::spawn(move || loop {
+            let job = receiver.lock().unwrap().recv().unwrap();
+            // Acquiring a lock might fail if the mutex is in a poisoned state, which can happen if some other thread panicked while holding the lock rather than releasing the lock.
+            println!("Worker {} got a job; executing.", id);
+            job();
         });
 
-        Worker { id, thread }
+        Worker { id, thread: Some(thread) }
     }
 }
 
@@ -23,7 +26,19 @@ pub struct ThreadPool {
     sender: mpsc::Sender<Job>,
 }
 
-// struct Job;
+
+impl Drop for ThreadPool {
+    fn drop(&mut self) {
+        for worker in &mut self.workers {
+            println!("Shutting down worker {}", worker.id);
+
+            if let Some(thread) = worker.thread.take() {
+                thread.join().unwrap();
+            }
+            // worker.thread.join().unwrap();
+        }
+    }
+} 
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
@@ -61,3 +76,5 @@ impl ThreadPool {
         ThreadPool { workers, sender }
     }
 }
+
+ 
