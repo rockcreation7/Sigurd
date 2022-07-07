@@ -1,17 +1,33 @@
-
 use std::thread;
+use std::sync::mpsc;
 
-pub struct ThreadPool{
-    threads: Vec<thread::JoinHandle<()>>,
+struct Worker {
+    id: usize,
+    thread: thread::JoinHandle<()>,
 }
 
-impl ThreadPool {
-  
+impl Worker {
+    fn new(id: usize, receiver: mpsc::Receiver<Job>) -> Worker {
+        let thread = thread::spawn(|| {
+            receiver;
+        });
 
+        Worker { id, thread }
+    }
+}
+
+pub struct ThreadPool {
+    workers: Vec<Worker>,
+    sender: mpsc::Sender<Job>,
+}
+
+struct Job;
+
+impl ThreadPool {
     pub fn execute<F>(&self, f: F)
     where
         // FnOnce() is the trait we want to use because the thread for running a request will only execute that request’s closure one time
-        // We need Send to transfer the closure from one thread to another and 'static because we don’t know how long the thread will take to execute. 
+        // We need Send to transfer the closure from one thread to another and 'static because we don’t know how long the thread will take to execute.
         F: FnOnce() + Send + 'static,
     {
     }
@@ -26,12 +42,14 @@ impl ThreadPool {
     pub fn new(size: usize) -> ThreadPool {
         assert!(size > 0);
 
-        let mut threads = Vec::with_capacity(size);
+        let (sender, receiver) = mpsc::channel();
 
-        for _ in 0..size {
-            // create some threads and store them in the vector
+        let mut workers = Vec::with_capacity(size);
+
+        for id in 0..size {
+            workers.push(Worker::new(id));
         }
 
-        ThreadPool { threads }
+        ThreadPool { workers, sender }
     }
 }
