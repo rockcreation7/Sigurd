@@ -1,7 +1,12 @@
-use std::thread;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
+
+enum Message {
+    NewJob(Job),
+    Terminate,
+}
 
 struct Worker {
     id: usize,
@@ -9,23 +14,33 @@ struct Worker {
 }
 
 impl Worker {
-    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Message>>>) -> Worker {
         let thread = thread::spawn(move || loop {
-            let job = receiver.lock().unwrap().recv().unwrap();
+            let message = receiver.lock().unwrap().recv().unwrap();
             // Acquiring a lock might fail if the mutex is in a poisoned state, which can happen if some other thread panicked while holding the lock rather than releasing the lock.
-            println!("Worker {} got a job; executing.", id);
-            job();
-        });
 
-        Worker { id, thread: Some(thread) }
+            match message {
+                Message::NewJob(job) => {
+                    println!("Worker {} got a job; executing.", id);
+                    job();
+                }
+                Message::Terminate => {
+                    println!("Worker {} was told to terminate.", id);
+                    break;
+                }
+            }
+        });
+        Worker {
+            id,
+            thread: Some(thread),
+        }
     }
 }
 
 pub struct ThreadPool {
     workers: Vec<Worker>,
-    sender: mpsc::Sender<Job>,
+    sender: mpsc::Sender<Message>,
 }
-
 
 impl Drop for ThreadPool {
     fn drop(&mut self) {
@@ -38,7 +53,7 @@ impl Drop for ThreadPool {
             // worker.thread.join().unwrap();
         }
     }
-} 
+}
 
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
@@ -50,7 +65,7 @@ impl ThreadPool {
         F: FnOnce() + Send + 'static,
     {
         let job = Box::new(f);
-        self.sender.send(job).unwrap();
+        self.sender.send(Message::NewJob(job)).unwrap();
     }
 
     /// Create a new ThreadPool.
@@ -76,5 +91,3 @@ impl ThreadPool {
         ThreadPool { workers, sender }
     }
 }
-
- 
