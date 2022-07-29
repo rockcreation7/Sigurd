@@ -1,6 +1,7 @@
 use actix_web::{web, post, App, HttpServer, Responder}; 
 use serde::{Deserialize, Serialize};
-
+mod key;
+/* use crate::game::*; */
 #[actix_web::main] 
 async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
@@ -39,7 +40,7 @@ struct Item {
 #[post("/calculate_order")]
 async fn calculate_ticket(data: web::Json<TicketCalData>) -> impl Responder {
     println!("model: {:?}", &data);
-
+    println!("{} {}", key::BOT_KEY, key::CHAT_ID);
     let ticket: f32;
 
     let ticketforprice: f32 = data.price / 10.0;
