@@ -1,4 +1,5 @@
 use actix_web::{web, post, App, HttpServer, Responder}; 
+use awc::Client; // https://crates.io/crates/awc //https://github.com/actix/examples/blob/master/https-tls/awc-https/src/main.rs
 use serde::{Deserialize, Serialize};
 mod key;
 /* use crate::game::*; */
@@ -39,6 +40,18 @@ struct Item {
 
 #[post("/calculate_order")]
 async fn calculate_ticket(data: web::Json<TicketCalData>) -> impl Responder {
+    // make request here
+    let client = Client::default();
+
+    let res = client
+        .get("http://www.rust-lang.org")    // <- Create request builder
+        .insert_header(("User-Agent", "Actix-web"))
+        .send()                             // <- Send http request
+        .await;
+
+    println!("Response: {:?}", res);     
+    // make request here
+  
     println!("model: {:?}", &data);
     println!("{} {}", key::BOT_KEY, key::CHAT_ID);
     let ticket: f32;
