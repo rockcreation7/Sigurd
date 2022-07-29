@@ -31,7 +31,11 @@ fn handle_connection(mut stream:TcpStream){
     let (status_line, filename) = if buffer.starts_with(get){
         ("HTTP/1.1 200 OK", "hello.html")
     }else if buffer.starts_with(sleep) {
-        thread::sleep(Duration::from_secs(5));
+        // thread::sleep(Duration::from_secs(5));
+
+        // let resp = reqwest::blocking::get("https://httpbin.org/ip")?.text()?;
+        // println!("{:#?}", resp);
+        // Ok(())
         ("HTTP/1.1 200 OK", "hello.html")
     } else{
         ("HTTP/1.1 404 OK", "404.html")
