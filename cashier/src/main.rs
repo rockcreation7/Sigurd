@@ -35,8 +35,6 @@ struct Item {
     id: f32,
     qty: i32,
 }
- 
-
 
 #[post("/calculate_order")]
 async fn calculate_ticket(data: web::Json<TicketCalData>) -> impl Responder {
