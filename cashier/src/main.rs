@@ -6,7 +6,6 @@ use actix_web::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
-
 mod key;
 
 /* use crate::game::*; */
@@ -59,12 +58,13 @@ async fn calculate_ticket(req: HttpRequest, data: web::Json<Order>) -> impl Resp
         .lock()
         .unwrap();
 
+    // https://core.telegram.org/bots/api#markdownv2-style
     let mut telegram_api = "https://api.telegram.org/bot".to_owned()
         + key::BOT_KEY
         + "/sendMessage?chat_id="
         + key::CHAT_ID
-        + "&text="
-        + "Name%20Qty%20Price%20Total%0A";
+        + "&parse_mode=HTML&text=";
+    // + "Name%20%20Qty%20%20Price%20%20Total%0A";
     //  + &format!("Order Total {:.2}", order_total);
 
     let mut order_total = 0.00;
@@ -73,18 +73,17 @@ async fn calculate_ticket(req: HttpRequest, data: web::Json<Order>) -> impl Resp
         let price_of_item = product_data[&elem.id].price;
         let item_total = price_of_item * elem.qty as f32;
         order_total = order_total + item_total;
-        let buff = product_data[&elem.id].name.to_owned()
-            + "%20*"
-            + &elem.qty.to_string()
-            + "%20£"
+        let buff = format!("£{:.2}", item_total).to_string()
+            + "%20=%20"
             + &price_of_item.to_string()
-            + "%20£"
-            + &item_total.to_string();
+            + "pcs%20*%20£"
+            + &elem.qty.to_string()
+            + "%20"
+            + &product_data[&elem.id].name;
         telegram_api.push_str(&(buff + "%0A"));
     }
 
-    telegram_api.push_str(&format!("Order Total £{:.2}", order_total));
-
+    telegram_api.push_str(&format!("£{:.2} Order Total", order_total));
     let resp = reqwest::get(telegram_api).await;
     // println!("Response: {:?}", resp);
 
@@ -92,7 +91,7 @@ async fn calculate_ticket(req: HttpRequest, data: web::Json<Order>) -> impl Resp
         Ok(data) => {
             println!("{:#?}", data);
             let json_data = data.json::<StatusData>().await.unwrap();
-            println!("Response: {:?}", json_data.ok);
+            println!("Response: ok - {:?}", json_data.ok);
             /*   return web::Json(OrderCalResult {
                 price: 0.0
             }); */
