@@ -1,28 +1,32 @@
-use actix_web::{post, web::{self, Data}, App, HttpServer, Responder, HttpRequest};
-// https://crates.io/crates/awc //https://github.com/actix/examples/blob/master/https-tls/awc-https/src/main.rs
-use derive_more::{Display, Error};
+use actix_web::{
+    post,
+    web::{self, Data},
+    App, HttpRequest, HttpServer, Responder,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
 mod key;
 
-
 /* use crate::game::*; */
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let data = Data::new(Mutex::new(key::get_product()));
-
     // let product_data:HashMap<i32, key::Product> = key::get_product();
-    HttpServer::new(move || App::new().app_data(Data::clone(&data)).service(calculate_ticket))
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
+    HttpServer::new(move || {
+        App::new()
+            .app_data(Data::clone(&data))
+            .service(calculate_ticket)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct OrderCalResult {
-    price: f32, 
+    price: f32,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -49,19 +53,37 @@ struct StatusData {
 async fn calculate_ticket(req: HttpRequest, data: web::Json<Order>) -> impl Responder {
     // make request here
     println!("model: {:?}", &data);
-    let product_data = req.app_data::<Data<Mutex<HashMap<i32, key::Product>>>>().unwrap().lock().unwrap();
+    let product_data = req
+        .app_data::<Data<Mutex<HashMap<i32, key::Product>>>>()
+        .unwrap()
+        .lock()
+        .unwrap();
+
+    let mut telegram_api = "https://api.telegram.org/bot".to_owned()
+        + key::BOT_KEY
+        + "/sendMessage?chat_id="
+        + key::CHAT_ID
+        + "&text="
+        + "Name%20Qty%20Price%20Total%0A";
+    //  + &format!("Order Total {:.2}", order_total);
+
     let mut order_total = 0.00;
     for elem in data.order.clone() {
         println!("{} {}", elem.id, elem.qty);
         let price_of_item = product_data[&elem.id].price;
-        order_total = order_total + price_of_item * elem.qty as f32;
+        let item_total = price_of_item * elem.qty as f32;
+        order_total = order_total + item_total;
+        let buff = product_data[&elem.id].name.to_owned()
+            + "%20*"
+            + &elem.qty.to_string()
+            + "%20£"
+            + &price_of_item.to_string()
+            + "%20£"
+            + &item_total.to_string();
+        telegram_api.push_str(&(buff + "%0A"));
     }
 
-    let telegram_api = "https://api.telegram.org/bot".to_owned()
-        + key::BOT_KEY
-        + "/sendMessage?chat_id="
-        + key::CHAT_ID
-        + "&parse_mode=Markdown&text=hello";
+    telegram_api.push_str(&format!("Order Total £{:.2}", order_total));
 
     let resp = reqwest::get(telegram_api).await;
     // println!("Response: {:?}", resp);
@@ -80,7 +102,5 @@ async fn calculate_ticket(req: HttpRequest, data: web::Json<Order>) -> impl Resp
         }
     }
 
-    web::Json(OrderCalResult {
-        price: order_total,
-    })
+    web::Json(OrderCalResult { price: order_total })
 }
