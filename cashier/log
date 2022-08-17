@@ -1,0 +1,8 @@
+
+17/8/2022 
+Not working in window - I removed TDM try to solve 
+# https://internals.rust-lang.org/t/problems-building-cargo-on-windows-gcc-not-found/4569/2
+# https://stackoverflow.com/questions/61645963/cant-install-cargo-binutils-library-failed-to-find-tool-is-gcc-exe-installe
+# pacman --sync mingw-w64-x86_64-gcc runned
+# pacman -Syu is the last cmd run
+ 

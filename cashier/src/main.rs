@@ -53,7 +53,7 @@ async fn calculate_order(req: HttpRequest, data: web::Json<Order>) -> impl Respo
     // make request here
     println!("model: {:?}", &data);
     let product_data = req
-        .app_data::<Data<Mutex<HashMap<i32, key::Product>>>>()
+        .app_data::<Data<Mutex<HashMap<i32, product::Product>>>>()
         .unwrap()
         .lock()
         .unwrap();
