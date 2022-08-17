@@ -7,11 +7,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 mod key;
-
+mod product;
 /* use crate::game::*; */
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let data = Data::new(Mutex::new(key::get_product()));
+    let data = Data::new(Mutex::new(product::get_product()));
     // let product_data:HashMap<i32, key::Product> = key::get_product();
     HttpServer::new(move || {
         App::new()
