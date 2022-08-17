@@ -16,7 +16,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(Data::clone(&data))
-            .service(calculate_ticket)
+            .service(calculate_order)
     })
     .bind(("127.0.0.1", 8080))?
     .run()
@@ -49,7 +49,7 @@ struct StatusData {
 }
 
 #[post("/calculate_order")]
-async fn calculate_ticket(req: HttpRequest, data: web::Json<Order>) -> impl Responder {
+async fn calculate_order(req: HttpRequest, data: web::Json<Order>) -> impl Responder {
     // make request here
     println!("model: {:?}", &data);
     let product_data = req
@@ -65,7 +65,7 @@ async fn calculate_ticket(req: HttpRequest, data: web::Json<Order>) -> impl Resp
         + key::CHAT_ID
         + "&parse_mode=HTML&text=";
     // + "Name%20%20Qty%20%20Price%20%20Total%0A";
-    //  + &format!("Order Total {:.2}", order_total);
+    // + &format!("Order Total {:.2}", order_total);
 
     let mut order_total = 0.00;
     for elem in data.order.clone() {
